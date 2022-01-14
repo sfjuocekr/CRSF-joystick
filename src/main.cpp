@@ -20,7 +20,7 @@
 
 // Endpoints for SBUS, you might need to find your own values!
 #define STARTPOINT 221 // 172 = FrSky, 221 = FlySky
-#define ENDPOINT 1824 // 1811 = FrSky, 1824 = FlySky
+#define ENDPOINT 1824  // 1811 = FrSky, 1824 = FlySky
 
 // Endpoints for CrossFire
 #define US_MIN 988
@@ -30,7 +30,26 @@ SBUS sbus(Serial1);
 static CrsfSerial crsf(Serial2, 115200);
 
 uint16_t channels[CHANNELS];
+uint16_t values[CHANNELS];
+
 bool failSafe, lostFrame;
+
+struct
+{
+  unsigned roll = 1500;
+  unsigned pitch = 1500;
+  unsigned yaw = 1500;
+  unsigned throttle = 1500;
+} sticks;
+
+void setSticks(int _min, int _max)
+{
+  // Use Xrotate and 0-1024 if you use the normal layout in usb_desc.h
+  Joystick.X(map(sticks.roll, _min, _max, 0, 65535));
+  Joystick.Y(map(sticks.pitch, _min, _max, 0, 65535));
+  Joystick.Z(map(sticks.throttle, _min, _max, 0, 65535));
+  Joystick.Zrotate(map(sticks.yaw, _min, _max, 0, 65535));
+}
 
 void setButton(unsigned _button, unsigned _value)
 {
@@ -41,16 +60,19 @@ void setButton(unsigned _button, unsigned _value)
 
 static void packetChannels()
 {
-  // Use Xrotate and 0-1024 if you use the normal layout in usb_desc.h
-  Joystick.X(map(crsf.getChannel(1), US_MIN, US_MAX, 0, 65535));
-  Joystick.Y(map(crsf.getChannel(2), US_MIN, US_MAX, 0, 65535));
-  Joystick.Z(map(crsf.getChannel(3), US_MIN, US_MAX, 0, 65535));
-  Joystick.Zrotate(map(crsf.getChannel(4), US_MIN, US_MAX, 0, 65535));
+  sticks.roll = crsf.getChannel(1);
+  sticks.pitch = crsf.getChannel(2);
+  sticks.yaw = crsf.getChannel(3);
+  sticks.throttle = crsf.getChannel(4);
+
+  setSticks(US_MIN, US_MAX);
 
   for (unsigned _button = 0; _button <= (CHANNELS - 4) / 3; _button++)
   {
     setButton(_button, map(crsf.getChannel(5 + _button), US_MIN, US_MAX, 0, 2));
   }
+
+  Joystick.send_now();
 }
 
 static void fakeVbatt()
@@ -71,12 +93,12 @@ static void fakeVbatt()
 
 void linkUp()
 {
-    digitalWrite(13, HIGH);
+  digitalWrite(13, HIGH);
 }
 
 void linkDown()
 {
-    digitalWrite(13, LOW);
+  digitalWrite(13, LOW);
 }
 
 void setup()
@@ -104,17 +126,19 @@ void loop()
   {
     if (sbus.read(&channels[0], &failSafe, &lostFrame))
     {
-      Joystick.X(map(channels[0], STARTPOINT, ENDPOINT, 0, 65535));
-      Joystick.Y(map(channels[1], STARTPOINT, ENDPOINT, 0, 65535));
-      Joystick.Z(map(channels[2], STARTPOINT, ENDPOINT, 0, 65535));
-      Joystick.Zrotate(map(channels[3], STARTPOINT, ENDPOINT, 0, 65535));
+      sticks.roll = channels[0];
+      sticks.pitch = channels[1];
+      sticks.yaw = channels[2];
+      sticks.throttle = channels[3];
+
+      setSticks(STARTPOINT, ENDPOINT);
 
       for (unsigned _button = 0; _button <= (CHANNELS - 4) / 3; _button++)
       {
         setButton(_button, map(channels[4 + _button], STARTPOINT, ENDPOINT, 0, 2));
       }
+
+      Joystick.send_now();
     }
   }
-
-  Joystick.send_now();
 }
