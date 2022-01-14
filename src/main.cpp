@@ -34,21 +34,15 @@ uint16_t values[CHANNELS];
 
 bool failSafe, lostFrame;
 
-struct
-{
-  unsigned roll = 1500;
-  unsigned pitch = 1500;
-  unsigned yaw = 1500;
-  unsigned throttle = 1500;
-} sticks;
-
-void setSticks(int _min, int _max)
+void setSticks(int _min = 1000, int _max = 2000)
 {
   // Use Xrotate and 0-1024 if you use the normal layout in usb_desc.h
-  Joystick.X(map(sticks.roll, _min, _max, 0, 65535));
-  Joystick.Y(map(sticks.pitch, _min, _max, 0, 65535));
-  Joystick.Z(map(sticks.throttle, _min, _max, 0, 65535));
-  Joystick.Zrotate(map(sticks.yaw, _min, _max, 0, 65535));
+  Joystick.X(map(channels[0], _min, _max, 0, 65535));
+  Joystick.Y(map(channels[1], _min, _max, 0, 65535));
+  Joystick.Z(map(channels[3], _min, _max, 0, 65535));
+  Joystick.Zrotate(map(channels[2], _min, _max, 0, 65535));
+
+  Joystick.send_now();
 }
 
 void setButton(unsigned _button, unsigned _value)
@@ -56,14 +50,16 @@ void setButton(unsigned _button, unsigned _value)
   Joystick.button(_button * 3 + 1, _value == 0 ? 1 : 0);
   Joystick.button(_button * 3 + 2, _value == 1 ? 1 : 0);
   Joystick.button(_button * 3 + 3, _value == 2 ? 1 : 0);
+
+  Joystick.send_now();
 }
 
 static void packetChannels()
 {
-  sticks.roll = crsf.getChannel(1);
-  sticks.pitch = crsf.getChannel(2);
-  sticks.yaw = crsf.getChannel(3);
-  sticks.throttle = crsf.getChannel(4);
+  channels[0] = crsf.getChannel(1);
+  channels[1] = crsf.getChannel(2);
+  channels[2] = crsf.getChannel(3);
+  channels[3] = crsf.getChannel(4);
 
   setSticks(US_MIN, US_MAX);
 
@@ -71,8 +67,6 @@ static void packetChannels()
   {
     setButton(_button, map(crsf.getChannel(5 + _button), US_MIN, US_MAX, 0, 2));
   }
-
-  Joystick.send_now();
 }
 
 static void fakeVbatt()
@@ -126,19 +120,12 @@ void loop()
   {
     if (sbus.read(&channels[0], &failSafe, &lostFrame))
     {
-      sticks.roll = channels[0];
-      sticks.pitch = channels[1];
-      sticks.yaw = channels[2];
-      sticks.throttle = channels[3];
-
       setSticks(STARTPOINT, ENDPOINT);
 
       for (unsigned _button = 0; _button <= (CHANNELS - 4) / 3; _button++)
       {
         setButton(_button, map(channels[4 + _button], STARTPOINT, ENDPOINT, 0, 2));
       }
-
-      Joystick.send_now();
     }
   }
 }
