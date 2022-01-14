@@ -11,3 +11,8 @@ CRSF = Serial2 (rx pin 9, tx pin 10)
 
 Channels 1, 2, 3 and 4 are axis; the rest is assumed to be three position switches.
 Having separate buttons makes setting up simulator functions a breeze!
+
+# Credits:
+
+ * SBUS from bolderflight: https://github.com/bolderflight/SBUS
+ * CrsfSerial from CapnBry: https://github.com/CapnBry/CRServoF/tree/master/lib/CrsfSerial
