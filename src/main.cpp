@@ -43,27 +43,28 @@ void setSticks(int _min = 1000, int _max = 2000)
   Joystick.send_now();
 }
 
-void setButton(unsigned _button, unsigned _value)
+void setButton(unsigned _button, int _min = 1000, int _max = 2000)
 {
-  Joystick.button(_button * 3 + 1, _value == 0 ? 1 : 0);
-  Joystick.button(_button * 3 + 2, _value == 1 ? 1 : 0);
-  Joystick.button(_button * 3 + 3, _value == 2 ? 1 : 0);
-
-  Joystick.send_now();
+  for (unsigned _position = 0; _position < 3; _position++)
+  {
+    Joystick.button(_button * 3 + _position + 1, (unsigned)map(channels[4 + _button], _min, _max, 0, 2) == _position ? 1 : 0);
+  }
 }
 
 static void packetChannels()
 {
-  channels[0] = crsf.getChannel(1);
-  channels[1] = crsf.getChannel(2);
-  channels[2] = crsf.getChannel(3);
-  channels[3] = crsf.getChannel(4);
+  for (unsigned _axis = 0; _axis <= 4; _axis++)
+  {
+    channels[_axis] = crsf.getChannel(_axis + 1);
+  }
 
   setSticks(US_MIN, US_MAX);
 
   for (unsigned _button = 0; _button < (CHANNELS - 4); _button++)
   {
-    setButton(_button, map(crsf.getChannel(5 + _button), US_MIN, US_MAX, 0, 2));
+    channels[4 + _button] = crsf.getChannel(5 + _button);
+    
+    setButton(_button, US_MIN, US_MAX);
   }
 }
 
@@ -122,7 +123,7 @@ void loop()
 
       for (unsigned _button = 0; _button < CHANNELS - 4; _button++)
       {
-        setButton(_button, map(channels[4 + _button], STARTPOINT, ENDPOINT, 0, 2));
+        setButton(_button, STARTPOINT, ENDPOINT);
       }
     }
   }
