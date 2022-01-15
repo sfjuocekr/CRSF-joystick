@@ -16,7 +16,7 @@
 #include <CrsfSerial.h>
 
 // Number of channels
-#define CHANNELS 8
+#define CHANNELS 16
 
 // Endpoints for SBUS, you might need to find your own values!
 
