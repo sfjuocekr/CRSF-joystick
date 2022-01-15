@@ -19,7 +19,6 @@
 #define CHANNELS 16
 
 // Endpoints for SBUS, you might need to find your own values!
-
 #define STARTPOINT 221 // 172 = FrSky, 221 = FlySky
 #define ENDPOINT 1824  // 1811 = FrSky, 1824 = FlySky
 
@@ -34,13 +33,11 @@ bool failSafe, lostFrame;
 
 void setSticks(int _min = 1000, int _max = 2000)
 {
-  // Use Xrotate and 0-1024 if you use the normal layout in usb_desc.h
+  // Use 0-1024 for min and mix instad of 0-65535 if you use the normal layout in usb_desc.h
   Joystick.X(map(channels[0], _min, _max, 0, 65535));
   Joystick.Y(map(channels[1], _min, _max, 0, 65535));
   Joystick.Z(map(channels[2], _min, _max, 0, 65535));
   Joystick.Xrotate(map(channels[3], _min, _max, 0, 65535));
-
-  Joystick.send_now();
 }
 
 void setButton(unsigned _button, int _min = 1000, int _max = 2000)
@@ -51,6 +48,14 @@ void setButton(unsigned _button, int _min = 1000, int _max = 2000)
   }
 }
 
+void setButtons(int _min = 1000, int _max = 2000)
+{
+  for (unsigned _button = 0; _button < (CHANNELS - 4); _button++)
+  {
+    setButton(_button, _min, _max);
+  }
+}
+
 static void packetChannels()
 {
   for (unsigned _axis = 0; _axis <= 4; _axis++)
@@ -58,14 +63,13 @@ static void packetChannels()
     channels[_axis] = crsf.getChannel(_axis + 1);
   }
 
-  setSticks(US_MIN, US_MAX);
-
   for (unsigned _button = 0; _button < (CHANNELS - 4); _button++)
   {
     channels[4 + _button] = crsf.getChannel(5 + _button);
-    
-    setButton(_button, US_MIN, US_MAX);
   }
+
+  setSticks(US_MIN, US_MAX);
+  setButtons(US_MIN, US_MAX);
 }
 
 static void fakeVbatt()
@@ -120,11 +124,9 @@ void loop()
     if (sbus.read(&channels[0], &failSafe, &lostFrame))
     {
       setSticks(STARTPOINT, ENDPOINT);
-
-      for (unsigned _button = 0; _button < CHANNELS - 4; _button++)
-      {
-        setButton(_button, STARTPOINT, ENDPOINT);
-      }
+      setButtons(STARTPOINT, ENDPOINT);
     }
   }
+
+  Joystick.send_now();
 }
