@@ -16,9 +16,10 @@
 #include <CrsfSerial.h>
 
 // Number of channels
-#define CHANNELS 16
+#define CHANNELS 8
 
 // Endpoints for SBUS, you might need to find your own values!
+
 #define STARTPOINT 221 // 172 = FrSky, 221 = FlySky
 #define ENDPOINT 1824  // 1811 = FrSky, 1824 = FlySky
 
@@ -28,10 +29,7 @@
 
 SBUS sbus(Serial1);
 static CrsfSerial crsf(Serial2, 115200);
-
 uint16_t channels[CHANNELS];
-uint16_t values[CHANNELS];
-
 bool failSafe, lostFrame;
 
 void setSticks(int _min = 1000, int _max = 2000)
@@ -39,8 +37,8 @@ void setSticks(int _min = 1000, int _max = 2000)
   // Use Xrotate and 0-1024 if you use the normal layout in usb_desc.h
   Joystick.X(map(channels[0], _min, _max, 0, 65535));
   Joystick.Y(map(channels[1], _min, _max, 0, 65535));
-  Joystick.Z(map(channels[3], _min, _max, 0, 65535));
-  Joystick.Zrotate(map(channels[2], _min, _max, 0, 65535));
+  Joystick.Z(map(channels[2], _min, _max, 0, 65535));
+  Joystick.Xrotate(map(channels[3], _min, _max, 0, 65535));
 
   Joystick.send_now();
 }
@@ -63,7 +61,7 @@ static void packetChannels()
 
   setSticks(US_MIN, US_MAX);
 
-  for (unsigned _button = 0; _button <= (CHANNELS - 4) / 3; _button++)
+  for (unsigned _button = 0; _button < (CHANNELS - 4); _button++)
   {
     setButton(_button, map(crsf.getChannel(5 + _button), US_MIN, US_MAX, 0, 2));
   }
@@ -122,7 +120,7 @@ void loop()
     {
       setSticks(STARTPOINT, ENDPOINT);
 
-      for (unsigned _button = 0; _button <= (CHANNELS - 4) / 3; _button++)
+      for (unsigned _button = 0; _button < CHANNELS - 4; _button++)
       {
         setButton(_button, map(channels[4 + _button], STARTPOINT, ENDPOINT, 0, 2));
       }
