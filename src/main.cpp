@@ -34,10 +34,16 @@ bool failSafe, lostFrame;
 void setSticks(int _min = 1000, int _max = 2000)
 {
   // Use 0-1024 for min and mix instad of 0-65535 if you use the normal layout in usb_desc.h
-  Joystick.X(map(channels[0], _min, _max, 0, 65535));
-  Joystick.Y(map(channels[1], _min, _max, 0, 65535));
-  Joystick.Z(map(channels[2], _min, _max, 0, 65535));
-  Joystick.Xrotate(map(channels[3], _min, _max, 0, 65535));
+  Joystick.X(map(channels[0], _min, _max, 0, 65535));         // ROLL
+  Joystick.Y(map(channels[1], _min, _max, 0, 65535));         // PITCH
+  Joystick.Z(map(channels[2], _min, _max, 0, 65535));         // THROTTLE
+  Joystick.Xrotate(map(channels[3], _min, _max, 0, 65535));   // YAW
+
+  // These are hacks to make different simulators work that do not support buttons!
+  Joystick.Yrotate(map(channels[4], _min, _max, 0, 65535));
+  Joystick.Zrotate(map(channels[5], _min, _max, 0, 65535));
+  Joystick.slider(1, map(channels[6], _min, _max, 0, 65535));
+  Joystick.hat(1, map(channels[7], _min, _max, 245, 113));
 }
 
 void setButton(unsigned _button, int _min = 1000, int _max = 2000)
@@ -58,14 +64,9 @@ void setButtons(int _min = 1000, int _max = 2000)
 
 static void packetChannels()
 {
-  for (unsigned _axis = 0; _axis <= 4; _axis++)
+  for (unsigned _channel = 0; _channel < CHANNELS; _channel++)
   {
-    channels[_axis] = crsf.getChannel(_axis + 1);
-  }
-
-  for (unsigned _button = 0; _button < (CHANNELS - 4); _button++)
-  {
-    channels[4 + _button] = crsf.getChannel(5 + _button);
+    channels[_channel] = crsf.getChannel(_channel + 1);
   }
 
   setSticks(US_MIN, US_MAX);
@@ -110,6 +111,8 @@ void setup()
 
   Joystick.useManualSend(true);
 }
+
+unsigned _test = 0;
 
 void loop()
 {
