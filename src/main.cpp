@@ -26,6 +26,9 @@
 #define US_MIN 988
 #define US_MAX 2011
 
+// Hack to enable the HAT
+unsigned hats[3] = {293, 338, 0};
+ 
 SBUS sbus(Serial1);
 static CrsfSerial crsf(Serial2, 115200);
 uint16_t channels[CHANNELS];
@@ -34,16 +37,16 @@ bool failSafe, lostFrame;
 void setSticks(int _min = 1000, int _max = 2000)
 {
   // Use 0-1024 for min and mix instad of 0-65535 if you use the normal layout in usb_desc.h
-  Joystick.X(map(channels[0], _min, _max, 0, 65535));         // ROLL
-  Joystick.Y(map(channels[1], _min, _max, 0, 65535));         // PITCH
-  Joystick.Z(map(channels[2], _min, _max, 0, 65535));         // THROTTLE
-  Joystick.Xrotate(map(channels[3], _min, _max, 0, 65535));   // YAW
+  Joystick.X(map(channels[0], _min, _max, 0, 65535));       // ROLL
+  Joystick.Y(map(channels[1], _min, _max, 0, 65535));       // PITCH
+  Joystick.Z(map(channels[2], _min, _max, 0, 65535));       // THROTTLE
+  Joystick.Xrotate(map(channels[3], _min, _max, 0, 65535)); // YAW
 
   // These are hacks to make different simulators work that do not support buttons!
   Joystick.Yrotate(map(channels[4], _min, _max, 0, 65535));
   Joystick.Zrotate(map(channels[5], _min, _max, 0, 65535));
   Joystick.slider(1, map(channels[6], _min, _max, 0, 65535));
-  Joystick.hat(1, map(channels[7], _min, _max, 245, 113));
+  Joystick.hat(1, hats[map(channels[7], _min, _max, 0, 2)]);
 }
 
 void setButton(unsigned _button, int _min = 1000, int _max = 2000)
@@ -111,8 +114,6 @@ void setup()
 
   Joystick.useManualSend(true);
 }
-
-unsigned _test = 0;
 
 void loop()
 {
