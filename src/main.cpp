@@ -26,11 +26,9 @@
 #define US_MIN 988
 #define US_MAX 2011
 
-// Hack to enable the HAT
-unsigned hats[3] = {293, 338, 0};
- 
 SBUS sbus(Serial1);
-static CrsfSerial crsf(Serial2, 115200);
+CrsfSerial crsf(Serial2, 115200);
+uint16_t hats[3] = {293, 338, 0};
 uint16_t channels[CHANNELS];
 bool failSafe, lostFrame;
 
@@ -65,7 +63,7 @@ void setButtons(int _min = 1000, int _max = 2000)
   }
 }
 
-static void packetChannels()
+void packetChannels()
 {
   for (unsigned _channel = 0; _channel < CHANNELS; _channel++)
   {
@@ -76,7 +74,7 @@ static void packetChannels()
   setButtons(US_MIN, US_MAX);
 }
 
-static void fakeVbatt()
+void fakeVbatt()
 {
   uint8_t crsfbatt[CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE];
 
@@ -112,6 +110,8 @@ void setup()
   crsf.onLinkDown = &linkDown;
   crsf.onPacketChannels = &packetChannels;
 
+  fakeVbatt();
+
   Joystick.useManualSend(true);
 }
 
@@ -121,7 +121,10 @@ void loop()
 
   if (crsf.isLinkUp())
   {
-    fakeVbatt();
+    if (millis() % 1000 == 0) // updates once per second are fine for this purpose
+    {
+      fakeVbatt();
+    }
   }
   else
   {
