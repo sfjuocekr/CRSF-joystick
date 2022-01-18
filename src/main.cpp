@@ -35,7 +35,6 @@ SBUS sbus(Serial1);
 CrsfSerial crsf(Serial2, 115200);
 uint32_t elapsedTime, tlmTime, hidTime;
 uint16_t hats[3] = {293, 338, 0};
-uint16_t channels[CHANNELS];
 uint16_t ch_latency[LATENCY + 1][CHANNELS];
 
 bool failSafe, lostFrame;
@@ -43,23 +42,23 @@ bool failSafe, lostFrame;
 void setSticks(int _min = 1000, int _max = 2000)
 {
   // Use 0-1024 for min and mix instad of 0-65535 if you use the normal layout in usb_desc.h
-  Joystick.X(map(channels[0], _min, _max, 0, 65535));       // ROLL
-  Joystick.Y(map(channels[1], _min, _max, 0, 65535));       // PITCH
-  Joystick.Z(map(channels[2], _min, _max, 0, 65535));       // THROTTLE
-  Joystick.Xrotate(map(channels[3], _min, _max, 0, 65535)); // YAW
+  Joystick.X(map(ch_latency[0][0], _min, _max, 0, 65535));       // ROLL
+  Joystick.Y(map(ch_latency[0][1], _min, _max, 0, 65535));       // PITCH
+  Joystick.Z(map(ch_latency[0][2], _min, _max, 0, 65535));       // THROTTLE
+  Joystick.Xrotate(map(ch_latency[0][3], _min, _max, 0, 65535)); // YAW
 
   // These are hacks to make different simulators work that do not support buttons!
-  Joystick.Yrotate(map(channels[4], _min, _max, 0, 65535));
-  Joystick.Zrotate(map(channels[5], _min, _max, 0, 65535));
-  Joystick.slider(1, map(channels[6], _min, _max, 0, 65535)); // FPV.SkyDive only sees one slider
-  Joystick.hat(1, hats[map(channels[7], _min, _max, 0, 2)]); // FPV.SkyDive know about the hat!
+  Joystick.Yrotate(map(ch_latency[0][4], _min, _max, 0, 65535));
+  Joystick.Zrotate(map(ch_latency[0][5], _min, _max, 0, 65535));
+  Joystick.slider(1, map(ch_latency[0][6], _min, _max, 0, 65535)); // FPV.SkyDive only sees one slider
+  Joystick.hat(1, hats[map(ch_latency[0][7], _min, _max, 0, 2)]); // FPV.SkyDive know about the hat!
 }
 
 void setButton(unsigned _button, int _min = 1000, int _max = 2000)
 {
   for (unsigned _position = 0; _position < 3; _position++)
   {
-    Joystick.button(_button * 3 + _position + 1, (unsigned)map(channels[4 + _button], _min, _max, 0, 2) == _position ? 1 : 0);
+    Joystick.button(_button * 3 + _position + 1, (unsigned)map(ch_latency[0][4 + _button], _min, _max, 0, 2) == _position ? 1 : 0);
   }
 }
 
@@ -75,7 +74,6 @@ void packetChannels()
 {
   for (unsigned _channel = 0; _channel < CHANNELS; _channel++)
   {
-    // channels[_channel] = crsf.getChannel(_channel + 1);
     if (LATENCY <= 1)
     {
       ch_latency[0][_channel] = crsf.getChannel(_channel + 1);
@@ -145,8 +143,6 @@ void setup()
 void loop()
 {
   elapsedTime = millis();
-
-  memcpy(channels, ch_latency[0], sizeof(uint16_t) * CHANNELS);
 
   if (LATENCY > 1)
   {
