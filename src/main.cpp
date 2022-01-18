@@ -33,7 +33,7 @@
 
 SBUS sbus(Serial1);
 CrsfSerial crsf(Serial2, 115200);
-uint32_t tlmTime, hidTime;
+uint32_t elapsedTime, tlmTime, hidTime;
 uint16_t hats[3] = {293, 338, 0};
 uint16_t channels[CHANNELS];
 uint16_t ch_latency[LATENCY + 1][CHANNELS];
@@ -144,6 +144,8 @@ void setup()
 
 void loop()
 {
+  elapsedTime = millis();
+
   memcpy(channels, ch_latency[0], sizeof(uint16_t) * CHANNELS);
 
   if (LATENCY > 1)
@@ -179,5 +181,10 @@ void loop()
     hidTime = millis();
 
     Joystick.send_now();
+  }
+
+  if (millis() - elapsedTime < 1) // if this is ever the case, just wait one millisecond.
+  {
+    delay(1);
   }
 }
