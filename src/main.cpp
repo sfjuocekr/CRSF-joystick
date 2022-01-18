@@ -51,8 +51,8 @@ void setSticks(int _min = 1000, int _max = 2000)
   // These are hacks to make different simulators work that do not support buttons!
   Joystick.Yrotate(map(channels[4], _min, _max, 0, 65535));
   Joystick.Zrotate(map(channels[5], _min, _max, 0, 65535));
-  Joystick.slider(1, map(channels[6], _min, _max, 0, 65535));
-  Joystick.hat(1, hats[map(channels[7], _min, _max, 0, 2)]);
+  Joystick.slider(1, map(channels[6], _min, _max, 0, 65535)); // FPV.SkyDive only sees one slider
+  Joystick.hat(1, hats[map(channels[7], _min, _max, 0, 2)]); // FPV.SkyDive know about the hat!
 }
 
 void setButton(unsigned _button, int _min = 1000, int _max = 2000)
@@ -176,7 +176,7 @@ void loop()
     }
   }
 
-  if (millis() - hidTime >= INTERVAL) // updates once per second are fine for this purpose
+  if (millis() - hidTime >= INTERVAL) // refresh joystick at a set interval
   {
     hidTime = millis();
 
