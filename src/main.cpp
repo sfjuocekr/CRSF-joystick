@@ -17,8 +17,8 @@
 
 // Latency testing, this will emulate different refresh rates and/or add latency between input and output.
 // Values are milliseconds.
-#define LATENCY 0 // increase to add latency
-#define INTERVAL 1 // increase to change the refresh interval
+#define LATENCY 1  // increase to add latency, 1 means no latency and 255 is the maximum.
+#define INTERVAL 1 // increase to change the refresh interval in milliseconds, 1 means as fast as possible.
 
 // Number of channels
 #define CHANNELS 16
@@ -33,9 +33,11 @@
 
 SBUS sbus(Serial1);
 CrsfSerial crsf(Serial2, 115200);
-uint32_t _time = 0;
+uint32_t tlmTime, hidTime;
 uint16_t hats[3] = {293, 338, 0};
 uint16_t channels[CHANNELS];
+uint16_t ch_latency[LATENCY + 1][CHANNELS];
+
 bool failSafe, lostFrame;
 
 void setSticks(int _min = 1000, int _max = 2000)
@@ -73,7 +75,15 @@ void packetChannels()
 {
   for (unsigned _channel = 0; _channel < CHANNELS; _channel++)
   {
-    channels[_channel] = crsf.getChannel(_channel + 1);
+    // channels[_channel] = crsf.getChannel(_channel + 1);
+    if (LATENCY <= 1)
+    {
+      ch_latency[0][_channel] = crsf.getChannel(_channel + 1);
+    }
+    else
+    {
+      ch_latency[LATENCY - 1][_channel] = crsf.getChannel(_channel + 1);
+    }
   }
 
   setSticks(US_MIN, US_MAX);
@@ -108,6 +118,17 @@ void linkDown()
 
 void setup()
 {
+  tlmTime = millis();
+  hidTime = millis();
+
+  for (uint8_t _x = 0; _x < LATENCY; _x++)
+  {
+    for (uint8_t _y = 0; _y < CHANNELS; _y++)
+    {
+      ch_latency[_x][_y] = 0;
+    }
+  }
+
   pinMode(13, OUTPUT);
 
   sbus.begin();
@@ -123,29 +144,39 @@ void setup()
 
 void loop()
 {
-  _time = millis();
+  memcpy(channels, ch_latency[0], sizeof(uint16_t) * CHANNELS);
+
+  if (LATENCY > 1)
+  {
+    for (uint8_t _bufs = 0; _bufs < LATENCY - 1; _bufs++)
+    {
+      memcpy(ch_latency[_bufs], ch_latency[_bufs + 1], sizeof(uint16_t) * CHANNELS);
+    }
+  }
 
   crsf.loop();
 
   if (crsf.isLinkUp())
   {
-    if (millis() % 1000 == 0) // updates once per second are fine for this purpose
+    if (millis() - tlmTime >= 1000) // updates once per second are fine for this purpose
     {
+      tlmTime = millis();
+
       fakeVbatt();
     }
   }
   else
   {
-    if (sbus.read(&channels[0], &failSafe, &lostFrame))
+    if (sbus.read(&ch_latency[LATENCY - 1][0], &failSafe, &lostFrame))
     {
       setSticks(STARTPOINT, ENDPOINT);
       setButtons(STARTPOINT, ENDPOINT);
     }
   }
 
-  if (INTERVAL == 0 || millis() % INTERVAL == 0) // updates every INTERVAL in ms
+  if (millis() - hidTime >= INTERVAL) // updates once per second are fine for this purpose
   {
-    while (millis() - _time < LATENCY) {}
+    hidTime = millis();
 
     Joystick.send_now();
   }
