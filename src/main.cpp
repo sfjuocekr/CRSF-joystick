@@ -15,6 +15,11 @@
 #include "SBUS.h"
 #include <CrsfSerial.h>
 
+// Latency testing, this will emulate different refresh rates and/or add latency between input and output.
+// Values are milliseconds.
+#define LATENCY 0 // increase to add latency
+#define INTERVAL 1 // increase to change the refresh interval
+
 // Number of channels
 #define CHANNELS 16
 
@@ -28,6 +33,7 @@
 
 SBUS sbus(Serial1);
 CrsfSerial crsf(Serial2, 115200);
+uint32_t _time = 0;
 uint16_t hats[3] = {293, 338, 0};
 uint16_t channels[CHANNELS];
 bool failSafe, lostFrame;
@@ -117,6 +123,8 @@ void setup()
 
 void loop()
 {
+  _time = millis();
+
   crsf.loop();
 
   if (crsf.isLinkUp())
@@ -135,5 +143,10 @@ void loop()
     }
   }
 
-  Joystick.send_now();
+  if (INTERVAL == 0 || millis() % INTERVAL == 0) // updates every INTERVAL in ms
+  {
+    while (millis() - _time < LATENCY) {}
+
+    Joystick.send_now();
+  }
 }
