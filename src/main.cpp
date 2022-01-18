@@ -51,7 +51,7 @@ void setSticks(int _min = 1000, int _max = 2000)
   Joystick.Yrotate(map(ch_latency[0][4], _min, _max, 0, 65535));
   Joystick.Zrotate(map(ch_latency[0][5], _min, _max, 0, 65535));
   Joystick.slider(1, map(ch_latency[0][6], _min, _max, 0, 65535)); // FPV.SkyDive only sees one slider
-  Joystick.hat(1, hats[map(ch_latency[0][7], _min, _max, 0, 2)]); // FPV.SkyDive know about the hat!
+  Joystick.hat(1, hats[map(ch_latency[0][7], _min, _max, 0, 2)]);  // FPV.SkyDive know about the hat!
 }
 
 void setButton(unsigned _button, int _min = 1000, int _max = 2000)
@@ -74,14 +74,7 @@ void packetChannels()
 {
   for (unsigned _channel = 0; _channel < CHANNELS; _channel++)
   {
-    if (LATENCY <= 1)
-    {
-      ch_latency[0][_channel] = crsf.getChannel(_channel + 1);
-    }
-    else
-    {
-      ch_latency[LATENCY - 1][_channel] = crsf.getChannel(_channel + 1);
-    }
+    ch_latency[LATENCY > 1 ? LATENCY - 1 : 0][_channel] = crsf.getChannel(_channel + 1);
   }
 
   setSticks(US_MIN, US_MAX);
@@ -165,7 +158,7 @@ void loop()
   }
   else
   {
-    if (sbus.read(&ch_latency[LATENCY - 1][0], &failSafe, &lostFrame))
+    if (sbus.read(&ch_latency[LATENCY > 1 ? LATENCY - 1 : 0][0], &failSafe, &lostFrame))
     {
       setSticks(STARTPOINT, ENDPOINT);
       setButtons(STARTPOINT, ENDPOINT);
