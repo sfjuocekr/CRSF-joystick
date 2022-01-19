@@ -18,7 +18,7 @@
 // Latency testing, this will emulate different refresh rates and/or add latency between input and output.
 // Values are milliseconds.
 #define LATENCY 1  // increase to add latency, 1 means no latency and 255 is the maximum.
-#define INTERVAL 1 // increase to change the refresh interval in milliseconds, 1 means as fast as possible.
+#define INTERVAL 1 // increase to change the refresh interval in milliseconds, 1 means every millisecond... USB won't go faster anyway!
 
 // Number of channels
 #define CHANNELS 16
@@ -33,10 +33,9 @@
 
 SBUS sbus(Serial1);
 CrsfSerial crsf(Serial2, 115200);
-uint32_t elapsedTime, tlmTime, hidTime;
-uint16_t hats[3] = {293, 338, 0};
+IntervalTimer hidTimer, latencyTimer, tlmTimer;
+uint16_t hats[3] = {293, 338, 360};
 uint16_t ch_latency[LATENCY + 1][CHANNELS];
-
 bool failSafe, lostFrame;
 
 void setSticks(int _min = 1000, int _max = 2000)
@@ -48,10 +47,10 @@ void setSticks(int _min = 1000, int _max = 2000)
   Joystick.Xrotate(map(ch_latency[0][3], _min, _max, 0, 65535)); // YAW
 
   // These are hacks to make different simulators work that do not support buttons!
-  Joystick.Yrotate(map(ch_latency[0][4], _min, _max, 0, 65535));
-  Joystick.Zrotate(map(ch_latency[0][5], _min, _max, 0, 65535));
+  Joystick.Yrotate(map(ch_latency[0][4], _min, _max, 0, 65535));   // AUX1 for TWGO
+  Joystick.Zrotate(map(ch_latency[0][5], _min, _max, 0, 65535));   // AUX2 for TWGO
   Joystick.slider(1, map(ch_latency[0][6], _min, _max, 0, 65535)); // FPV.SkyDive only sees one slider
-  Joystick.hat(1, hats[map(ch_latency[0][7], _min, _max, 0, 2)]);  // FPV.SkyDive know about the hat!
+  Joystick.hat(1, hats[map(ch_latency[0][7], _min, _max, 0, 2)]);  // FPV.SkyDive knows about the hat!
 }
 
 void setButton(unsigned _button, int _min = 1000, int _max = 2000)
@@ -81,14 +80,30 @@ void packetChannels()
   setButtons(US_MIN, US_MAX);
 }
 
-void fakeVbatt()
+void onInterval()
+{
+  Joystick.send_now();
+}
+
+void induceLatency()
+{
+  if (LATENCY > 1)
+  {
+    for (uint8_t _bufs = 0; _bufs < LATENCY - 1; _bufs++)
+    {
+      memcpy(ch_latency[_bufs], ch_latency[_bufs + 1], sizeof(uint16_t) * CHANNELS);
+    }
+  }
+}
+
+void onTelemetry()
 {
   uint8_t crsfbatt[CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE];
 
   crsfbatt[0] = 0;
   crsfbatt[1] = 50; // Fake 5v voltage
   crsfbatt[2] = 0;
-  crsfbatt[3] = 0; // current
+  crsfbatt[3] = 50; // current
   crsfbatt[4] = 0;
   crsfbatt[5] = 0; // capacity
   crsfbatt[6] = 0;
@@ -100,27 +115,20 @@ void fakeVbatt()
 void linkUp()
 {
   digitalWrite(13, HIGH);
+
+  tlmTimer.begin(&onTelemetry, 1000 * 500); // Send telemetry only twice per second
 }
 
 void linkDown()
 {
   digitalWrite(13, LOW);
+
+  tlmTimer.end();
 }
 
 void setup()
 {
-  tlmTime = millis();
-  hidTime = millis();
-
-  for (uint8_t _x = 0; _x < LATENCY; _x++)
-  {
-    for (uint8_t _y = 0; _y < CHANNELS; _y++)
-    {
-      ch_latency[_x][_y] = 0;
-    }
-  }
-
-  pinMode(13, OUTPUT);
+  pinMode(13, OUTPUT); // LED to show if CRSF is active
 
   sbus.begin();
 
@@ -128,52 +136,22 @@ void setup()
   crsf.onLinkDown = &linkDown;
   crsf.onPacketChannels = &packetChannels;
 
-  fakeVbatt();
-
   Joystick.useManualSend(true);
+
+  hidTimer.begin(&onInterval, (INTERVAL == 0 ? 1 : INTERVAL) * 1000);
+  latencyTimer.begin(&induceLatency, 1000); // latency step is one millisecond
 }
 
 void loop()
 {
-  elapsedTime = millis();
-
-  if (LATENCY > 1)
-  {
-    for (uint8_t _bufs = 0; _bufs < LATENCY - 1; _bufs++)
-    {
-      memcpy(ch_latency[_bufs], ch_latency[_bufs + 1], sizeof(uint16_t) * CHANNELS);
-    }
-  }
-
   crsf.loop();
 
-  if (crsf.isLinkUp())
-  {
-    if (millis() - tlmTime >= 1000) // updates once per second are fine for this purpose
-    {
-      tlmTime = millis();
-
-      fakeVbatt();
-    }
-  }
-  else
+  if (!crsf.isLinkUp()) // fallback to SBUS
   {
     if (sbus.read(&ch_latency[LATENCY > 1 ? LATENCY - 1 : 0][0], &failSafe, &lostFrame))
     {
       setSticks(STARTPOINT, ENDPOINT);
       setButtons(STARTPOINT, ENDPOINT);
     }
-  }
-
-  if (millis() - hidTime >= INTERVAL) // refresh joystick at a set interval
-  {
-    hidTime = millis();
-
-    Joystick.send_now();
-  }
-
-  if (millis() - elapsedTime < 1) // if this is ever the case, just wait one millisecond.
-  {
-    delay(1);
   }
 }
