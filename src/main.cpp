@@ -33,7 +33,7 @@
 
 SBUS sbus(Serial1);
 CrsfSerial crsf(Serial2, 115200);
-IntervalTimer hidTimer, latencyTimer;
+IntervalTimer latencyTimer;
 uint8_t crsfbatt[CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE] = {0, 50, 0, 50, 0, 0, 0, 100}; // fake full 5v battery
 uint16_t hats[3] = {293, 338, 0};
 uint16_t ch_latency[LATENCY + 1][CHANNELS];
@@ -83,11 +83,6 @@ void packetChannels()
   crsf.queuePacket(CRSF_SYNC_BYTE, CRSF_FRAMETYPE_BATTERY_SENSOR, &crsfbatt, sizeof(crsfbatt));
 }
 
-void onInterval()
-{
-  Joystick.send_now();
-}
-
 void induceLatency()
 {
   for (uint8_t _bufs = 0; _bufs < LATENCY; _bufs++)
@@ -126,16 +121,6 @@ void setup()
 
   Joystick.useManualSend(true);
 
-  for (uint8_t _x = 0; _x <= 10; _x++)
-  {
-    // Take a breather, I'm not sure why but I need to delay here or 1ms timers refused to work and the whole thing explodes from tine to time...
-    digitalWrite(LED_BUILTIN, _x % 2 == 0 ? LOW : HIGH);
-    
-    delay(100);
-  }
-
-  hidTimer.begin(&onInterval, (INTERVAL == 0 ? 1 : INTERVAL) * 1000);
-
   if (LATENCY > 0)
   {
     latencyTimer.begin(&induceLatency, 1000); // latency step is one millisecond
@@ -153,5 +138,10 @@ void loop()
       setSticks(STARTPOINT, ENDPOINT);
       setButtons(STARTPOINT, ENDPOINT);
     }
+  }
+
+  if (millis() % (INTERVAL == 0 ? 1 : INTERVAL) == 0)
+  {
+    Joystick.send_now();
   }
 }
