@@ -33,11 +33,11 @@
 
 SBUS sbus(Serial1);
 CrsfSerial crsf(Serial2, 115200);
-IntervalTimer latencyTimer;
 uint8_t crsfbatt[CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE] = {0, 50, 0, 50, 0, 0, 0, 100}; // fake full 5v battery
 uint16_t hats[3] = {293, 338, 0};
 uint16_t ch_latency[LATENCY + 1][CHANNELS];
-bool failSafe, lostFrame;
+uint32_t timing[3] = {0, 0, 0};
+bool sbusStatus[2];
 
 void setSticks(uint16_t _min = 1000, uint16_t _max = 2000)
 {
@@ -120,11 +120,6 @@ void setup()
   crsf.onPacketChannels = &packetChannels;
 
   Joystick.useManualSend(true);
-
-  if (LATENCY > 0)
-  {
-    latencyTimer.begin(&induceLatency, 1000); // latency step is one millisecond
-  }
 }
 
 void loop()
@@ -133,15 +128,42 @@ void loop()
 
   if (!crsf.isLinkUp()) // fallback to SBUS
   {
-    if (sbus.read(&ch_latency[LATENCY][0], &failSafe, &lostFrame))
+    if (sbus.read(&ch_latency[LATENCY][0], &sbusStatus[0], &sbusStatus[1]))
     {
       setSticks(STARTPOINT, ENDPOINT);
       setButtons(STARTPOINT, ENDPOINT);
     }
   }
 
-  if (millis() % (INTERVAL == 0 ? 1 : INTERVAL) == 0)
+  timing[0] = micros();
+
+  if (LATENCY > 0 && timing[0] - timing[1] >= 1000)
+  {
+    induceLatency();
+
+    timing[1] = micros();
+  }
+
+  if (timing[0] - timing[2] >= (INTERVAL == 0 ? 1 : INTERVAL) * 1000)
   {
     Joystick.send_now();
+
+    timing[2] = micros();
   }
 }
+
+/*void setup()
+{
+  Serial.begin(115200);
+  Serial2.begin(115200);
+  crsf.setPassthroughMode(true, 115200);
+}
+
+void loop()
+{
+  if (Serial.available())
+    Serial2.write(Serial.read());
+
+  if (Serial2.available())
+    Serial.write(Serial2.read());
+}*/
