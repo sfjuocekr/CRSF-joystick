@@ -42,6 +42,7 @@ private:
     crsfLinkStatistics_t _linkStatistics;
     uint32_t _lastReceive;
     uint32_t _lastChannelsPacket;
+    uint32_t _baud = CRSF_BAUDRATE;
     bool _linkIsUp;
     bool _passthroughMode;
     int _channels[CRSF_NUM_CHANNELS];
