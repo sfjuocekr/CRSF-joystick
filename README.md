@@ -13,6 +13,8 @@ Channels 1, 2, 3 and 4 are axis; the rest is assumed to be three position switch
 Having separate buttons makes setting up simulator functions a breeze!
 I have added a few hacks to make different simulators compatible with this joystick.
 
+Also works in BetaFlight passthrough to flash your receiver, be sure to use a compatible baud rate for your device!
+
 # Credits:
 
  * SBUS from bolderflight: https://github.com/bolderflight/SBUS
